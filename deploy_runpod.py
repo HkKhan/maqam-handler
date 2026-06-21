@@ -24,12 +24,12 @@ load_dotenv()
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 DOCKER_IMAGE   = os.getenv("DOCKER_IMAGE", "ghcr.io/hkkhan/maqam-handler:latest")
-ENDPOINT_NAME  = "maqam-voice-fingerprinting"
+ENDPOINT_NAME  = "maqam-voice-fingerprinting-v3"
 
 # GPU: RTX 3090 (24GB) is cheapest that comfortably fits all three models
 # Options: NVIDIA RTX 3090, NVIDIA RTX A4000, NVIDIA RTX 4090
 GPU_IDS        = ["NVIDIA RTX 3090"]   # RunPod GPU type string
-MAX_WORKERS    = 3      # scale up to 3 parallel requests
+MAX_WORKERS    = 2      # scale up to 2 parallel requests
 MIN_WORKERS    = 0      # scale to zero when idle (pay nothing at rest)
 IDLE_TIMEOUT   = 5      # seconds before scaling down an idle worker
 

@@ -220,6 +220,8 @@ def extract_user_word_features(audio_np, whisper_pipe, sr=16000):
 
         words.append({
             "text": text,
+            "start_s": round(start, 3),
+            "end_s": round(end, 3),
             "duration_s": round(duration_s, 3),
             "duration_norm": round(duration_norm, 4),
             "pitch_mean_hz": round(pitch_mean, 1),
@@ -345,6 +347,10 @@ def generate_word_feedback(user_words, ref_data):
             entry["pitch_detail"] = "Pitch matches well."
 
         # ── Numeric deltas for the frontend ──────────────────────────────
+        entry["user_start_s"]     = uw.get("start_s", 0)
+        entry["user_end_s"]       = uw.get("end_s", 0)
+        entry["ref_start_s"]      = rw.get("start", 0)
+        entry["ref_end_s"]        = rw.get("end", 0)
         entry["user_duration_s"]  = uw["duration_s"]
         entry["ref_duration_s"]   = rw["duration_s"]
         entry["user_pitch_hz"]    = uw["pitch_mean_hz"]
@@ -403,8 +409,9 @@ def handler(job):
     results.sort(key=lambda x: x["score"], reverse=True)
     best_id = results[0]["id"]
 
-    # ── 7. Word-level feedback (new!) ─────────────────────────────────────────
+    # ── 7. Word-level feedback & Reference Audio URL ──────────────────────────
     word_feedback = []
+    ref_audio_url = None
     try:
         ref_features = m.get("ref_features", {})
         
@@ -416,6 +423,22 @@ def handler(job):
             user_words, _, _ = extract_user_word_features(processed, m["whisper"])
             word_feedback    = generate_word_feedback(user_words, ref_data)
             log.info(f"Generated feedback for {len(word_feedback)} words.")
+            
+            # Generate presigned URL for the reference Fatiha audio
+            s3 = boto3.client(
+                "s3",
+                endpoint_url=R2_ENDPOINT,
+                aws_access_key_id=R2_KEY_ID,
+                aws_secret_access_key=R2_SECRET,
+                config=Config(signature_version="s3v4"),
+                region_name="auto",
+            )
+            slug_name = best_id.strip("/")
+            ref_audio_url = s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': R2_BUCKET, 'Key': f"fatiha_full/{slug_name}.wav"},
+                ExpiresIn=3600
+            )
         else:
             log.info(f"No reference features for {best_id}, skipping word feedback.")
     except Exception as e:
@@ -427,6 +450,7 @@ def handler(job):
         "transcription":    transcription,
         "fatiha_verified":  fatiha_verified,
         "word_feedback":    word_feedback,
+        "ref_audio_url":    ref_audio_url,
     }
 
 
