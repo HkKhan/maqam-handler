@@ -1,0 +1,11 @@
+torch
+torchaudio
+torchvision
+deepfilternet
+transformers
+librosa
+datasets
+scipy
+numpy
+kaggle
+soundfile
